@@ -8,11 +8,11 @@
 
 ## Phase 1 — Codex, target first working block
 
-- [ ] Initialize package, CLI, tests, Git ignore rules and simple install/run instructions.
-- [ ] Write v1 and v2 sample app functions, synthetic seed data, unsafe SQL candidate and rehearsal runner.
-- [ ] Gate runner uses a fresh temporary DB for every call and returns a genuine BLOCK caused by the migration.
-- [ ] Tests verify the unsafe candidate fails for the expected reason, fixture remains untouched, and report verdict follows the gate results.
-- [ ] Stop and show Leen the actual failing CLI output and repo status. Do **not** repair `candidate.sql` yet.
+- [x] Initialize package, CLI, tests, Git ignore rules and simple install/run instructions.
+- [x] Write v1 and v2 sample app functions, synthetic seed data, unsafe SQL candidate and rehearsal runner.
+- [x] Gate runner uses a fresh temporary DB for every call and returns a genuine BLOCK caused by the migration.
+- [x] Tests verify the unsafe candidate fails for the expected reason, fixture remains untouched, and report verdict follows the gate results.
+- [x] Stop and show Leen the actual failing CLI output and repo status. Do **not** repair `candidate.sql` yet.
 
 ## Phase 2 — Leen + Bob IDE, core hackathon work
 

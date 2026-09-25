@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "verdict": "BLOCK",
+  "summary": "Release blocked: required gates failed or were skipped",
+  "migration": "migrations/candidate.sql",
+  "migration_sha256": "1b40f8837edc343f949bdcf4e90416f655e9ebe2e3434b6dad1e5456d2336b39",
+  "seed_count": 5,
+  "gates": [
+    {
+      "id": "migration",
+      "result": "FAIL",
+      "evidence": {
+        "error_type": "OperationalError",
+        "error": "Cannot add a NOT NULL column with default value NULL",
+        "sqlite_errorcode": 1,
+        "sqlite_errorname": "SQLITE_ERROR"
+      },
+      "elapsed_seconds": 0.000598000013269484
+    },
+    {
+      "id": "preservation",
+      "result": "SKIP",
+      "elapsed_seconds": null,
+      "evidence": {
+        "reason": "Prerequisite migration failed"
+      }
+    },
+    {
+      "id": "old-version",
+      "result": "SKIP",
+      "elapsed_seconds": null,
+      "evidence": {
+        "reason": "Prerequisite migration failed"
+      }
+    },
+    {
+      "id": "new-version",
+      "result": "SKIP",
+      "elapsed_seconds": null,
+      "evidence": {
+        "reason": "Prerequisite migration failed"
+      }
+    },
+    {
+      "id": "rollback",
+      "result": "SKIP",
+      "elapsed_seconds": null,
+      "evidence": {
+        "reason": "Prerequisite migration failed"
+      }
+    }
+  ],
+  "elapsed_seconds": 0.017036300036124885,
+  "scope": "Local synthetic SQLite simulation; not a production safety guarantee."
+}
