@@ -24,9 +24,14 @@ def decision(gates):
 
 
 def migrate(db_path, sql):
+    # sqlite3.executescript returns rowcount=-1 and no per-statement feedback.
+    # The only observable fact after a successful call is that no exception was
+    # raised.  Report the semicolon-delimited segment count as a text property
+    # of the input, not a claim about what was executed.
+    statements_in_script = sum(1 for s in sql.split(";") if s.strip())
     with connect(db_path) as db:
         db.executescript(sql)
-    return {"summary": "SQLite executed the candidate SQL"}
+    return {"statements_in_script": statements_in_script}
 
 
 def preservation(db_path, baseline):
@@ -70,8 +75,10 @@ def rollback(db_path, new_evidence):
     order_id = app_v1.create_order(db_path, "Demo Rollback", "Fictional locker", "pending")
     created = dict(id=order_id, customer_label="Demo Rollback", address="Fictional locker", status="pending")
     require(app_v1.get_order(db_path, order_id) == created, "Rollback write did not round-trip")
+    with connect(db_path) as db:
+        columns = [row[1] for row in db.execute("PRAGMA table_info(orders)")]
     return {"v2_order_read_by_v1": expected, "created_order": created,
-            "schema_unchanged": True}
+            "orders_columns": columns}
 
 
 def rehearse(migration):

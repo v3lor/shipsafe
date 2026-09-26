@@ -20,8 +20,10 @@ def markdown(report):
              f"Seeded orders: {report['seed_count']}",
              f"Measured elapsed seconds: {report['elapsed_seconds']:.6f}", ""]
     for gate in report["gates"]:
+        elapsed = gate["elapsed_seconds"]
+        elapsed_str = f"{elapsed:.6f}" if elapsed is not None else "not measured (gate skipped)"
         lines.extend([f"## {gate['id']}: {gate['result']}", "",
-                      f"Measured seconds: {gate['elapsed_seconds']}", "", "```json",
+                      f"Measured seconds: {elapsed_str}", "", "```json",
                       json.dumps(gate["evidence"], ensure_ascii=False, indent=2), "```", ""])
     lines.extend(["## Investigation and remediation", "",
                   "Gate evidence above is observed. IBM Bob IDE should investigate the failure, "

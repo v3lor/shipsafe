@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "verdict": "GO",
+  "summary": "GO for this simulated scenario",
+  "migration": "migrations/candidate.sql",
+  "migration_sha256": "dad33ddc613b7f8f99150e547a44f130aea02c07f24526ea6b149f1e66f09448",
+  "seed_count": 5,
+  "gates": [
+    {
+      "id": "migration",
+      "result": "PASS",
+      "evidence": {
+        "statements_in_script": 1
+      },
+      "elapsed_seconds": 0.004340599989518523
+    },
+    {
+      "id": "preservation",
+      "result": "PASS",
+      "evidence": {
+        "count_before": 5,
+        "count_after": 5,
+        "preserved_orders": [
+          {
+            "id": 1,
+            "customer_label": "Demo Cedar",
+            "address": "1 Imaginary Lane",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "customer_label": "Demo Orbit",
+            "address": null,
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "customer_label": "Demo O'Clock",
+            "address": "",
+            "status": "shipped"
+          },
+          {
+            "id": 4,
+            "customer_label": "Demo Café",
+            "address": "Unit Ω, Fictional Station",
+            "status": "delivered"
+          },
+          {
+            "id": 5,
+            "customer_label": "Demo Parcel",
+            "address": "Line one\nLine two — invented",
+            "status": "pending"
+          }
+        ]
+      },
+      "elapsed_seconds": 0.0012477999553084373
+    },
+    {
+      "id": "old-version",
+      "result": "PASS",
+      "evidence": {
+        "read_seed_id": 1,
+        "created_order": {
+          "id": 6,
+          "customer_label": "Demo Rollout",
+          "address": null,
+          "status": "pending"
+        }
+      },
+      "elapsed_seconds": 0.005980500020086765
+    },
+    {
+      "id": "new-version",
+      "result": "PASS",
+      "evidence": {
+        "legacy_order": {
+          "id": 1,
+          "customer_label": "Demo Cedar",
+          "address": "1 Imaginary Lane",
+          "status": "pending",
+          "delivery_window": null
+        },
+        "created_order": {
+          "id": 7,
+          "customer_label": "Demo New App",
+          "address": "Imaginary depot",
+          "status": "pending",
+          "delivery_window": "9–12"
+        },
+        "optional_order_id": 8
+      },
+      "elapsed_seconds": 0.011929899919778109
+    },
+    {
+      "id": "rollback",
+      "result": "PASS",
+      "evidence": {
+        "v2_order_read_by_v1": {
+          "id": 7,
+          "customer_label": "Demo New App",
+          "address": "Imaginary depot",
+          "status": "pending"
+        },
+        "created_order": {
+          "id": 9,
+          "customer_label": "Demo Rollback",
+          "address": "Fictional locker",
+          "status": "pending"
+        },
+        "orders_columns": [
+          "id",
+          "customer_label",
+          "address",
+          "status",
+          "delivery_window"
+        ]
+      },
+      "elapsed_seconds": 0.006918600061908364
+    }
+  ],
+  "elapsed_seconds": 0.045635599992237985,
+  "scope": "Local synthetic SQLite simulation; not a production safety guarantee."
+}

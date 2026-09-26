@@ -39,6 +39,24 @@ def test_unsafe_is_real_sqlite_failure_and_dependencies_skip():
     assert all(g["elapsed_seconds"] is None for g in report["gates"][1:])
 
 
+def test_migrate_evidence_is_observed_not_invented(tmp_path):
+    # migration evidence must report a text property of the SQL input, not
+    # fabricate anything about execution.  sqlite3.executescript yields no
+    # per-statement feedback (rowcount=-1, lastrowid=None), so the key name
+    # must reflect that origin.
+    from shipsafe.seed import seed
+    db = tmp_path / "check.sqlite"
+    seed(db)
+    ev = runner.migrate(db, "SELECT 1; SELECT 2;")
+    assert "statements_in_script" in ev
+    assert ev["statements_in_script"] == 2
+    assert "statements_executed" not in ev
+    assert "summary" not in ev
+    # single-statement candidate migration
+    ev2 = runner.migrate(db, "ALTER TABLE orders ADD COLUMN delivery_window TEXT;")
+    assert ev2["statements_in_script"] == 1
+
+
 def test_repeatability_fixture_unchanged_and_temp_cleanup(monkeypatch):
     original = (ROOT / "shipsafe/seed.py").read_bytes(), UNSAFE.read_bytes()
     paths = []
@@ -61,9 +79,13 @@ def test_real_downstream_app_gates_on_same_database(v2_database):
     runner.preservation(v2_database, baseline)
     runner.old_version(v2_database, baseline)
     new = runner.new_version(v2_database, baseline)
-    runner.rollback(v2_database, new)
+    rb = runner.rollback(v2_database, new)
     assert len(app_v1.list_orders(v2_database)) == len(ORDERS) + 4
     assert app_v2.get_order(v2_database, new["created_order"]["id"])["delivery_window"] == "9–12"
+    # Rollback evidence must be observed (column list), not a hardcoded claim.
+    assert "orders_columns" in rb
+    assert "id" in rb["orders_columns"]
+    assert "schema_unchanged" not in rb
 
 
 def test_orchestration_go_with_test_only_schema(v2_database, tmp_path, monkeypatch):

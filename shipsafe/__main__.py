@@ -23,7 +23,7 @@ def main(argv=None):
     except (OSError, UnicodeError) as error:
         print(f"ShipSafe input/output error: {error}", file=sys.stderr)
         return 2
-    print(terminal(report))
+    sys.stdout.buffer.write((terminal(report) + "\n").encode("utf-8"))
     return 0 if report["verdict"] == "GO" else 1
 
 
