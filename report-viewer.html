@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShipSafe Report Viewer</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    background: #f0f2f5;
+    color: #1f2328;
+    min-height: 100vh;
+  }
+
+  header {
+    background: #1f2328;
+    color: #fff;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+  header .tagline { font-size: 12px; color: #8b949e; margin-top: 1px; }
+
+  .main { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+
+  /* ── Loader panel ── */
+  .loader-panel {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 28px 28px 24px;
+    margin-bottom: 28px;
+  }
+  .loader-panel h2 { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+  .file-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .file-slot {
+    flex: 1;
+    min-width: 240px;
+    border: 1px dashed #c9d1d9;
+    border-radius: 6px;
+    padding: 14px 16px;
+    background: #f7f8fa;
+    position: relative;
+  }
+  .file-slot label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #57606a;
+    margin-bottom: 8px;
+  }
+  .file-slot input[type="file"] {
+    width: 100%;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .file-slot .slot-name {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #57606a;
+    min-height: 16px;
+  }
+  .hint {
+    margin-top: 14px;
+    font-size: 12px;
+    color: #57606a;
+  }
+  .hint code {
+    background: #f0f2f5;
+    border: 1px solid #e5e7eb;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 11px;
+  }
+
+  /* ── Compare layout ── */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 720px) {
+    .compare-grid { grid-template-columns: 1fr; }
+  }
+  .panel-single { max-width: 680px; }
+
+  /* ── Report card ── */
+  .report-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .verdict-banner {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 20px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .verdict-badge {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    padding: 4px 14px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+  .verdict-badge.go   { background: #d1fae5; color: #065f46; }
+  .verdict-badge.block { background: #fee2e2; color: #991b1b; }
+  .verdict-badge.unknown { background: #f3f4f6; color: #374151; }
+
+  .verdict-meta { flex: 1; min-width: 0; }
+  .verdict-summary { font-size: 14px; font-weight: 500; }
+  .verdict-sub {
+    font-size: 12px;
+    color: #57606a;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── Gate list ── */
+  .gate-list { list-style: none; }
+  .gate-item {
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .gate-item:last-child { border-bottom: none; }
+
+  .gate-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 20px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.12s;
+  }
+  .gate-header:hover { background: #f7f8fa; }
+
+  .gate-pill {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    min-width: 44px;
+    text-align: center;
+  }
+  .gate-pill.pass { background: #d1fae5; color: #065f46; }
+  .gate-pill.fail { background: #fee2e2; color: #991b1b; }
+  .gate-pill.skip { background: #fef3c7; color: #92400e; }
+
+  .gate-name {
+    flex: 1;
+    font-weight: 500;
+    font-size: 13px;
+    font-family: "SFMono-Regular", Consolas, monospace;
+  }
+  .gate-elapsed {
+    font-size: 11px;
+    color: #8b949e;
+    flex-shrink: 0;
+  }
+  .gate-chevron {
+    font-size: 10px;
+    color: #8b949e;
+    flex-shrink: 0;
+    transition: transform 0.18s;
+  }
+  .gate-header[aria-expanded="true"] .gate-chevron { transform: rotate(90deg); }
+
+  .gate-evidence {
+    display: none;
+    padding: 0 20px 14px 62px;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.55;
+    background: #f7f8fa;
+    border-top: 1px solid #e5e7eb;
+    overflow-x: auto;
+  }
+  .gate-evidence.open { display: block; }
+  .gate-evidence pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .key   { color: #3b82d4; }
+  .str   { color: #0e7490; }
+  .num   { color: #7c5cd8; }
+  .bool  { color: #b45309; }
+  .null  { color: #991b1b; }
+
+  /* ── Metadata footer inside card ── */
+  .card-footer {
+    padding: 10px 20px;
+    font-size: 11px;
+    color: #57606a;
+    border-top: 1px solid #e5e7eb;
+    background: #f7f8fa;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 20px;
+  }
+  .card-footer span { white-space: nowrap; }
+  .card-footer code {
+    font-family: "SFMono-Regular", Consolas, monospace;
+    background: #e5e7eb;
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-size: 10px;
+  }
+
+  /* ── Empty state ── */
+  .empty {
+    padding: 40px 24px;
+    text-align: center;
+    color: #8b949e;
+    font-size: 13px;
+  }
+  .empty .empty-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.4; }
+
+  /* ── Compare diff badge ── */
+  .diff-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 20px;
+    font-size: 12px;
+    background: #fffbeb;
+    border-bottom: 1px solid #fde68a;
+    color: #92400e;
+  }
+  .diff-arrow { font-size: 14px; }
+
+  /* ── Section heading ── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #57606a;
+    margin-bottom: 8px;
+    padding-left: 2px;
+  }
+
+  /* ── Scope note ── */
+  .scope-note {
+    margin-top: 20px;
+    font-size: 11px;
+    color: #8b949e;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>ShipSafe Report Viewer</h1>
+    <div class="tagline">Load real JSON reports from the CLI · no mock data</div>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- File picker -->
+  <div class="loader-panel">
+    <h2>Load reports</h2>
+    <div class="file-row">
+      <div class="file-slot" id="slot-a">
+        <label for="file-a">Report A</label>
+        <input type="file" id="file-a" accept=".json,application/json">
+        <div class="slot-name" id="name-a">No file selected</div>
+      </div>
+      <div class="file-slot" id="slot-b">
+        <label for="file-b">Report B (optional — enables before/after comparison)</label>
+        <input type="file" id="file-b" accept=".json,application/json">
+        <div class="slot-name" id="name-b">No file selected</div>
+      </div>
+    </div>
+    <p class="hint">
+      Generate reports with:
+      <code>python -m shipsafe rehearse --migration migrations/candidate.sql --json out/report.json</code>
+      &nbsp;·&nbsp;
+      Load <code>out/unsafe.json</code> as Report A and <code>out/report.json</code> as Report B to see
+      the full before/after comparison.
+    </p>
+  </div>
+
+  <!-- Output area -->
+  <div id="output"></div>
+
+  <div class="scope-note" id="scope-note" style="display:none"></div>
+</div>
+
+<script>
+"use strict";
+
+/* ── Syntax-highlight JSON ── */
+function highlightJSON(obj) {
+  const raw = JSON.stringify(obj, null, 2);
+  return raw.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(\.\d+)?([eE][+-]?\d+)?)/g, match => {
+    if (/^"/.test(match)) {
+      if (/:$/.test(match)) return `<span class="key">${esc(match)}</span>`;
+      return `<span class="str">${esc(match)}</span>`;
+    }
+    if (/true|false/.test(match)) return `<span class="bool">${match}</span>`;
+    if (/null/.test(match))       return `<span class="null">${match}</span>`;
+    return `<span class="num">${match}</span>`;
+  });
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ── Gate result normaliser ── */
+const GATE_LABELS = {
+  migration:    'migration',
+  preservation: 'preservation',
+  'old-version':'old-version',
+  'new-version':'new-version',
+  rollback:     'rollback',
+};
+
+const ORDERED_GATES = ['migration','preservation','old-version','new-version','rollback'];
+
+function pillClass(result) {
+  if (!result) return 'skip';
+  const r = result.toUpperCase();
+  if (r === 'PASS') return 'pass';
+  if (r === 'FAIL') return 'fail';
+  return 'skip';
+}
+
+/* ── Build a single report card ── */
+function buildCard(report, label, compareGates) {
+  const verdict = (report.verdict || '').toUpperCase();
+  const verdictClass = verdict === 'GO' ? 'go' : verdict === 'BLOCK' ? 'block' : 'unknown';
+
+  // Map gates by id for lookup
+  const gateMap = {};
+  (report.gates || []).forEach(g => { gateMap[g.id] = g; });
+
+  let gateHTML = '';
+  ORDERED_GATES.forEach(gid => {
+    const gate = gateMap[gid];
+    if (!gate) return;
+
+    const result = (gate.result || 'SKIP').toUpperCase();
+    const pc = pillClass(result);
+    const elapsed = gate.elapsed_seconds != null
+      ? `${gate.elapsed_seconds.toFixed(4)}s`
+      : '—';
+
+    // Did this gate change vs the compare report?
+    let diffBadge = '';
+    if (compareGates) {
+      const cmp = compareGates[gid];
+      if (cmp && cmp.result !== gate.result) {
+        diffBadge = `<div class="diff-row">
+          <span class="diff-arrow">&#8645;</span>
+          Changed from <strong>${esc(cmp.result)}</strong> → <strong>${esc(gate.result)}</strong>
+        </div>`;
+      }
+    }
+
+    const evidenceHTML = highlightJSON(gate.evidence || {});
+    const uid = `gate-${label}-${gid}`;
+
+    gateHTML += `
+      ${diffBadge}
+      <li class="gate-item">
+        <div class="gate-header" id="${uid}-hdr" role="button" aria-expanded="false"
+             tabindex="0" data-target="${uid}-body"
+             onclick="toggleEvidence(this)"
+             onkeydown="if(event.key==='Enter'||event.key===' ')toggleEvidence(this)">
+          <span class="gate-pill ${pc}">${result}</span>
+          <span class="gate-name">${esc(gid)}</span>
+          <span class="gate-elapsed">${elapsed}</span>
+          <span class="gate-chevron">&#9658;</span>
+        </div>
+        <div class="gate-evidence" id="${uid}-body">
+          <pre>${evidenceHTML}</pre>
+        </div>
+      </li>`;
+  });
+
+  const sha = report.migration_sha256
+    ? `<span>SHA-256 <code>${esc(report.migration_sha256.slice(0,12))}…</code></span>`
+    : '';
+
+  return `
+    <div class="report-card">
+      <div class="verdict-banner">
+        <span class="verdict-badge ${verdictClass}">${verdict || '?'}</span>
+        <div class="verdict-meta">
+          <div class="verdict-summary">${esc(report.summary || 'No summary')}</div>
+          <div class="verdict-sub">${esc(report.migration || '')}</div>
+        </div>
+      </div>
+      <ul class="gate-list">
+        ${gateHTML}
+      </ul>
+      <div class="card-footer">
+        <span>Seeds: <strong>${report.seed_count ?? '—'}</strong></span>
+        <span>Elapsed: <strong>${report.elapsed_seconds != null ? report.elapsed_seconds.toFixed(3)+'s' : '—'}</strong></span>
+        ${sha}
+        <span>Schema v${report.schema_version ?? '?'}</span>
+      </div>
+    </div>`;
+}
+
+/* ── Toggle evidence panel ── */
+function toggleEvidence(hdr) {
+  const expanded = hdr.getAttribute('aria-expanded') === 'true';
+  hdr.setAttribute('aria-expanded', String(!expanded));
+  const body = document.getElementById(hdr.dataset.target);
+  if (body) body.classList.toggle('open', !expanded);
+}
+
+/* ── Render everything ── */
+let reportA = null;
+let reportB = null;
+
+function render() {
+  const out = document.getElementById('output');
+  const scopeEl = document.getElementById('scope-note');
+
+  if (!reportA && !reportB) {
+    out.innerHTML = `<div class="empty">
+      <div class="empty-icon">&#128196;</div>
+      <div>Select a JSON report above to get started.</div>
+    </div>`;
+    scopeEl.style.display = 'none';
+    return;
+  }
+
+  // Collect scope strings
+  const scopes = [];
+  if (reportA && reportA.scope) scopes.push(reportA.scope);
+  if (reportB && reportB.scope && reportB.scope !== (reportA && reportA.scope)) scopes.push(reportB.scope);
+  if (scopes.length) {
+    scopeEl.textContent = scopes[0];
+    scopeEl.style.display = '';
+  } else {
+    scopeEl.style.display = 'none';
+  }
+
+  if (reportA && reportB) {
+    // Before/after comparison — A is "before", B is "after"
+    const gateMapA = {};
+    (reportA.gates || []).forEach(g => { gateMapA[g.id] = g; });
+    const gateMapB = {};
+    (reportB.gates || []).forEach(g => { gateMapB[g.id] = g; });
+
+    out.innerHTML = `
+      <div class="compare-grid">
+        <div>
+          <div class="section-label">Report A — Before</div>
+          ${buildCard(reportA, 'a', gateMapB)}
+        </div>
+        <div>
+          <div class="section-label">Report B — After</div>
+          ${buildCard(reportB, 'b', gateMapA)}
+        </div>
+      </div>`;
+  } else {
+    const r = reportA || reportB;
+    const lbl = reportA ? 'a' : 'b';
+    out.innerHTML = `<div class="panel-single">${buildCard(r, lbl, null)}</div>`;
+  }
+}
+
+/* ── File loading ── */
+function loadFile(file, slot, cb) {
+  if (!file) return;
+  const nameEl = document.getElementById(`name-${slot}`);
+  nameEl.textContent = file.name;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      cb(JSON.parse(e.target.result));
+    } catch (err) {
+      nameEl.textContent = `⚠ Parse error: ${err.message}`;
+      cb(null);
+    }
+  };
+  reader.readAsText(file);
+}
+
+document.getElementById('file-a').addEventListener('change', function() {
+  loadFile(this.files[0], 'a', data => { reportA = data; render(); });
+});
+document.getElementById('file-b').addEventListener('change', function() {
+  loadFile(this.files[0], 'b', data => { reportB = data; render(); });
+});
+
+// Initial empty state
+render();
+</script>
+</body>
+</html>

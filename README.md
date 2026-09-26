@@ -1,5 +1,33 @@
 # ShipSafe — start here
 
+## Report viewer (no build step required)
+
+Open `report-viewer.html` directly in any modern browser — no server needed:
+
+```
+# Windows
+start report-viewer.html
+
+# macOS
+open report-viewer.html
+
+# Linux
+xdg-open report-viewer.html
+```
+
+**Load a single report:** click **Report A** → select `out/unsafe.json` (red, BLOCK) or
+`out/report.json` (green, GO). The viewer shows the verdict banner, all five gate pills,
+and expandable JSON evidence for each gate.
+
+**Before/after comparison:** load `out/unsafe.json` as **Report A** and `out/report.json`
+as **Report B**. The two cards appear side by side. Gates whose result changed between runs
+are highlighted with a before → after badge.
+
+All data comes from the files you select. The viewer contains no mock results or hardcoded
+verdicts.
+
+---
+
 ## Run the scaffold (Python 3.11+)
 
 From this repository root:
