@@ -86,6 +86,38 @@
     font-size: 11px;
   }
 
+  .example-bar {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .example-bar span {
+    font-size: 12px;
+    color: #57606a;
+  }
+  .btn-example {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    background: #1f2328;
+    color: #fff;
+    transition: background 0.14s;
+  }
+  .btn-example:hover { background: #3b82d4; }
+  .btn-example:disabled { opacity: 0.5; cursor: not-allowed; }
+  .example-status {
+    font-size: 12px;
+    color: #57606a;
+    min-width: 0;
+  }
+
   /* ── Compare layout ── */
   .compare-grid {
     display: grid;
@@ -297,12 +329,17 @@
       </div>
     </div>
     <p class="hint">
-      Generate reports with:
+      Generate your own reports:
       <code>python -m shipsafe rehearse --migration migrations/candidate.sql --json out/report.json</code>
       &nbsp;·&nbsp;
       Load <code>out/unsafe.json</code> as Report A and <code>out/report.json</code> as Report B to see
       the full before/after comparison.
     </p>
+    <div class="example-bar">
+      <span>Or try the committed demo reports:</span>
+      <button class="btn-example" id="btn-example" onclick="loadExample()">Load example (BLOCK → GO)</button>
+      <span class="example-status" id="example-status"></span>
+    </div>
   </div>
 
   <!-- Output area -->
@@ -514,6 +551,43 @@ document.getElementById('file-a').addEventListener('change', function() {
 document.getElementById('file-b').addEventListener('change', function() {
   loadFile(this.files[0], 'b', data => { reportB = data; render(); });
 });
+
+/* ── Load bundled example reports via fetch ── */
+function loadExample() {
+  const btn = document.getElementById('btn-example');
+  const status = document.getElementById('example-status');
+  btn.disabled = true;
+  status.textContent = 'Loading…';
+
+  const base = document.currentScript
+    ? document.currentScript.src.replace(/[^/]*$/, '')
+    : './';
+
+  // Resolve demo/ relative to this HTML file's location
+  const here = location.href.replace(/[^/]*$/, '');
+  const redURL  = here + 'demo/red.json';
+  const greenURL = here + 'demo/green.json';
+
+  Promise.all([fetch(redURL), fetch(greenURL)])
+    .then(([ra, rb]) => {
+      if (!ra.ok) throw new Error('demo/red.json: ' + ra.status);
+      if (!rb.ok) throw new Error('demo/green.json: ' + rb.status);
+      return Promise.all([ra.json(), rb.json()]);
+    })
+    .then(([red, green]) => {
+      reportA = red;
+      reportB = green;
+      document.getElementById('name-a').textContent = 'demo/red.json (example)';
+      document.getElementById('name-b').textContent = 'demo/green.json (example)';
+      status.textContent = '';
+      btn.disabled = false;
+      render();
+    })
+    .catch(err => {
+      status.textContent = '⚠ ' + err.message + ' — serve via HTTP to use this button';
+      btn.disabled = false;
+    });
+}
 
 // Initial empty state
 render();

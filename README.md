@@ -1,10 +1,29 @@
 # ShipSafe — start here
 
+## Live demo
+
+**[https://v3lor.github.io/shipsafe/](https://v3lor.github.io/shipsafe/)**
+
+Opens `report-viewer.html` hosted on GitHub Pages. Click **"Load example (BLOCK → GO)"** to
+instantly load the two committed demo reports (`demo/red.json` and `demo/green.json`) and see
+the full before/after comparison: the unsafe migration that blocks release on the left, the
+repaired safe migration with all five gates passing on the right.
+
 ## Report viewer (no build step required)
 
-Open `report-viewer.html` directly in any modern browser — no server needed:
+Open `report-viewer.html` directly in any modern browser.
+
+**Quickest way — local HTTP server** (required for the "Load example" button):
+
+```sh
+# Python 3 (any platform)
+python -m http.server 8000
+# then open http://localhost:8000/report-viewer.html
+```
 
 ```
+# Or just open the file directly (file pickers still work; "Load example" needs HTTP):
+
 # Windows
 start report-viewer.html
 
@@ -23,8 +42,12 @@ and expandable JSON evidence for each gate.
 as **Report B**. The two cards appear side by side. Gates whose result changed between runs
 are highlighted with a before → after badge.
 
-All data comes from the files you select. The viewer contains no mock results or hardcoded
-verdicts.
+**"Load example" button:** when served over HTTP (including GitHub Pages), loads
+`demo/red.json` (BLOCK, unsafe migration) and `demo/green.json` (GO, repaired migration)
+automatically.
+
+All data comes from the files you select or the committed demo files. The viewer contains
+no mock results or hardcoded verdicts.
 
 ---
 
