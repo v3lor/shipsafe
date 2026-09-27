@@ -1,133 +1,130 @@
-# ShipSafe — start here
+# ShipSafe
+
+ShipSafe rehearses a database migration against a copy of realistic synthetic data before the release goes out. It checks five things in order on the same temporary SQLite database: whether the migration runs, whether existing rows survive, whether the old app version still works on the migrated data, whether the new app version works, and whether rolling back to the old app still works after the new app has written a row. Each gate produces a JSON evidence object. The final verdict is **GO** only when all five gates pass; any FAIL or SKIP produces **BLOCK**.
+
+**IBM Bob IDE** investigated the failing migration, identified the root cause, designed and implemented the safe fix, reran all checks, and produced the release decision.
 
 ## Live demo
 
-**[https://v3lor.github.io/shipsafe/](https://v3lor.github.io/shipsafe/)**
+**[https://v3lor.github.io/shipsafe/](https://v3lor.github.io/shipsafe/)** · [About ShipSafe](https://v3lor.github.io/shipsafe/about.html)
 
-Opens `report-viewer.html` hosted on GitHub Pages. Click **"Load example (BLOCK → GO)"** to
-instantly load the two committed demo reports (`demo/red.json` and `demo/green.json`) and see
-the full before/after comparison: the unsafe migration that blocks release on the left, the
-repaired safe migration with all five gates passing on the right.
+Open the report viewer and click **"Load example (BLOCK → GO)"** to instantly see the full before/after comparison with the two committed demo reports.
 
-## Report viewer (no build step required)
+## The scenario
 
-Open `report-viewer.html` directly in any modern browser.
+The sample app (`shipsafe/app_v1.py`, `shipsafe/app_v2.py`) tracks delivery orders. A planned v2 adds a `delivery_window` column. The unsafe first attempt (`examples/unsafe.sql`) declares the column `NOT NULL` with no default, which SQLite rejects when existing rows have no value for it. All four dependent gates are skipped and the verdict is **BLOCK**.
 
-**Quickest way — local HTTP server** (required for the "Load example" button):
+The safe migration (`migrations/candidate.sql`) uses `ADD COLUMN … DEFAULT NULL`, which SQLite accepts for rows already in the table. The new app treats a `NULL` delivery window as "not yet assigned". The old app ignores the new column entirely. Rollback — switching back to v1 after v2 has written a row — still reads and writes correctly because v1's queries are column-explicit and never reference `delivery_window`.
 
-```sh
-# Python 3 (any platform)
-python -m http.server 8000
-# then open http://localhost:8000/report-viewer.html
-```
+## Five gates
 
-```
-# Or just open the file directly (file pickers still work; "Load example" needs HTTP):
+| Gate | What it checks |
+|------|---------------|
+| **migration** | `sqlite3.executescript` applies the candidate SQL without error |
+| **preservation** | All five seeded rows survive the migration unchanged |
+| **old-version** | `app_v1.get_order` reads a seed row; `app_v1.create_order` writes a new one |
+| **new-version** | `app_v2.get_order` reads a legacy row (NULL delivery_window); `app_v2.create_order` writes with a window value |
+| **rollback** | `app_v1.get_order` reads the v2-written row; `app_v1.create_order` writes again; `PRAGMA table_info` records observed column names |
 
-# Windows
-start report-viewer.html
+`decision()` in `shipsafe/rehearse.py` blocks on any FAIL or SKIP gate, verified by ten parameterised pytest cases.
 
-# macOS
-open report-viewer.html
+## Genuine evidence
 
-# Linux
-xdg-open report-viewer.html
-```
+Both captured runs are committed verbatim in [`evidence/`](evidence/):
 
-**Load a single report:** click **Report A** → select `out/unsafe.json` (red, BLOCK) or
-`out/report.json` (green, GO). The viewer shows the verdict banner, all five gate pills,
-and expandable JSON evidence for each gate.
+- [`evidence/red-run.json`](evidence/red-run.json) / [`evidence/red-run.md`](evidence/red-run.md) — BLOCK, `examples/unsafe.sql`, `OperationalError`
+- [`evidence/green-run.json`](evidence/green-run.json) / [`evidence/green-run.md`](evidence/green-run.md) — GO, `migrations/candidate.sql`, all five gates PASS
 
-**Before/after comparison:** load `out/unsafe.json` as **Report A** and `out/report.json`
-as **Report B**. The two cards appear side by side. Gates whose result changed between runs
-are highlighted with a before → after badge.
+The demo reports served by the live viewer are copies of these files (`demo/red.json`, `demo/green.json`).
 
-**"Load example" button:** when served over HTTP (including GitHub Pages), loads
-`demo/red.json` (BLOCK, unsafe migration) and `demo/green.json` (GO, repaired migration)
-automatically.
+Bob session screenshots (IBM Bob IDE task summaries) are in [`bob_sessions/`](bob_sessions/).
 
-All data comes from the files you select or the committed demo files. The viewer contains
-no mock results or hardcoded verdicts.
-
----
-
-## Run the scaffold (Python 3.11+)
-
-From this repository root:
+## Run the CLI yourself
 
 ```sh
 python -m venv .venv
 # Windows PowerShell:
 .\.venv\Scripts\Activate.ps1
-# macOS/Linux: source .venv/bin/activate
+# macOS / Linux:
+source .venv/bin/activate
+
 python -m pip install -e ".[test]"
-python -m pytest -q
-python -m shipsafe rehearse --migration migrations/candidate.sql --json out/report.json
 ```
 
-The initial CLI deliberately exits **1 (BLOCK)**. SQLite rejects the candidate
-with `Cannot add a NOT NULL column with default value NULL`. Migration is FAIL;
-preservation, old-version, new-version, and rollback are SKIP. The pytest suite
-should pass: the negative test asserts the real failure, not a failed test run.
-Tests use `examples/unsafe.sql`, so Bob can repair the candidate without removing
-the regression test. No safe migration is included in this scaffold.
+**Red run** — reproduce the original failure:
 
-JSON defaults to `out/report.json`; Markdown defaults to `out/release-decision.md`
-(override with `--markdown PATH`). Exit codes: 0 = all five gates PASS, 1 = BLOCK,
-2 = CLI/input/output error. No verdict is emitted for an unreadable migration.
-Every rehearsal seeds five synthetic records into a unique temporary database,
-then deletes it. No production/fixture database path is accepted. Rollout and
-rollback gates use the same database and invoke real app functions. Rollback
-switches back to v1 without undoing schema changes. Outcomes are deterministic;
-measured timings naturally vary. Run only trusted local migration SQL.
+```sh
+python -m shipsafe rehearse --migration examples/unsafe.sql --json out/unsafe.json
+# exits 1 (BLOCK); migration gate FAIL, four gates SKIP
+```
 
-See `DATA.md` for provenance and `evidence/` for the captured initial red run.
-Downstream tests use a test-only v2 schema to verify gate behavior, not a repaired
-release migration or green release evidence.
+**Green run** — reproduce the repaired release:
 
-## Exact handoff to IBM Bob IDE
+```sh
+python -m shipsafe rehearse --migration migrations/candidate.sql --json out/report.json
+# exits 0 (GO); all five gates PASS
+```
 
-Open this repository in Bob IDE, run the commands above, inspect the actual
-`out/report.json` and `out/release-decision.md`, then use **Prompt B in PROMPTS.md**.
-The first repair belongs in `migrations/candidate.sql`, which is still identical
-to `examples/unsafe.sql`. Investigate and implement the compatible rollout;
-retain the unsafe exhibit. Rerun tests and the CLI, capture genuine green evidence,
-and document the verified root cause/remediation. Add actual Bob session screenshots
-to `bob_sessions/`. No repair, green release report, or Bob session is fabricated here.
+JSON is written to the path you specify. Markdown defaults to `out/release-decision.md` (override with `--markdown PATH`). Exit codes: `0` = GO, `1` = BLOCK, `2` = CLI/input/output error.
 
-**Pitch:** ShipSafe rehearses a software release against a copy of realistic sample data. It checks whether the migration runs, whether the current and new app versions work during rollout, whether rollback still works, and whether data survives. IBM Bob IDE investigates failed checks, repairs the rollout, and produces an evidence-backed release decision.
+Every run creates a fresh temporary database, seeds five deterministic synthetic rows, runs the gates, then deletes the database. The `out/` directory is gitignored; load your generated files with the viewer's file pickers.
 
-**Hackathon:** IBM Bob 2.0, September 25–27, 2026. Official guide: https://lablab-ibm-bob-2-hackathon-guide.s3.us.cloud-object-storage.appdomain.cloud/index.html . Read the current event page for submission times and requirements: https://lablab.ai/ai-hackathons/ibm-bob-2-hackathon .
+## Run the tests
 
-## Do this first — your actions
+```sh
+python -m pytest -q
+```
 
-1. Register for the hackathon and form/join your team on lablab.ai. Check the event's exact submission deadline in your account; do not infer it from the date range.
-2. Accept the IBM Bob invitation sent to the registration email, make an IBMid if needed, and install the current Bob IDE. Sign in with the **hackathon-provisioned** account. Confirm you are in the hackathon account before spending Bobcoins. Bob IDE is mandatory; Bob Shell and watsonx are optional.
-3. Make a **new public GitHub repository** named `shipsafe` (or similar). Do not place this inside your capstone or Luqmar repository. Keep the dataset synthetic and the code created for this event.
-4. Open the repository in Codex. Give Codex the six Markdown files in this package and paste **Prompt A** from `PROMPTS.md`. Ask it to commit only the scaffold and intentionally failing rehearsal. Run the scaffold yourself once and check it actually fails for the stated reason.
-5. Open that same repository in Bob IDE. Paste **Prompt B**. Let Bob inspect the failed run, plan the repair, edit the migration/app, run the checks, and generate the release report. Use Bob for the central investigation and implementation; save meaningful Bob task session summaries.
-6. Run the final rehearsal from a clean checkout. Record terminal output and the report. Make your demo video and any slides requested by the event submission form. Submit the repository and other required fields before the actual deadline.
+Twenty-three tests pass. The test suite includes a case that asserts `examples/unsafe.sql` genuinely fails with `OperationalError` (not a hardcoded result), parameterised tests that verify `decision()` blocks on each possible FAIL/SKIP combination, and integration tests that run real gates on a test-only schema.
 
-## What you should see
+## IBM Bob's role
 
-- **Before Bob:** the rehearsal is red because an unsafe migration attempts to add a required `delivery_window` column while existing orders have no value. A real SQLite operation must fail; no hardcoded “red” result.
-- **After Bob:** a safe additive migration succeeds; the old and new app versions both work on migrated data; rollback to the old app still works after a new app write; existing orders are preserved. The final report is green with genuine command output and a short explanation of the original failure and repair.
-- **Optional stretch:** add a second scenario in which a new status value cannot be understood by the old app during rollback. Only attempt this after the first complete demo works.
+Bob opened this repository in Bob IDE with the failing rehearsal already committed. Using the IDE's agent and plan modes, Bob:
 
-## Division of work
+1. Read the real `evidence/red-run.json` output and identified `OperationalError: Cannot add a NOT NULL column with default value NULL`.
+2. Traced the failure to `examples/unsafe.sql`'s `ADD COLUMN delivery_window TEXT NOT NULL` declaration.
+3. Designed the safe fix: `ADD COLUMN delivery_window TEXT DEFAULT NULL`, which SQLite accepts for existing rows.
+4. Edited `migrations/candidate.sql`, reran the rehearsal, confirmed all five gates PASS, and verified the pytest suite still passes.
+5. Audited the gate evidence objects for fabricated claims; found and fixed three issues (documented in `LIMITATIONS.md`).
+6. Produced the committed green evidence and session screenshots.
 
-| You | Codex | Bob IDE |
-| --- | --- | --- |
-| Registration, accounts, GitHub, decisions, run/record/demo/submission, check real results | Build the intentionally broken sample app and reusable rehearsal runner; document commands | Investigate failure, plan fix, implement safe rollout, run tests, generate decision report, review result |
+Bob's task session screenshots are in `bob_sessions/`.
 
-**Critical rule:** using Bob only to write a README or generate screenshots does not fulfill this concept. Show Bob doing the release investigation and repair in the IDE. The guide requires relevant Bob task session summary screenshots under `bob_sessions/` in the final repository. Never create fake session screenshots.
+## Report viewer
 
-## Files in this package
+Open [`report-viewer.html`](report-viewer.html) in a browser. For the **Load example** button, serve over HTTP:
 
-- `PRD.md`: precise problem, scenario, pass/fail gates and scope.
-- `ARCHITECTURE.md`: repository structure and how the rehearsal should work.
-- `TASKS.md`: build order and ownership.
-- `PROMPTS.md`: ready-to-paste prompts for Codex and Bob.
-- `DEMO.md`: demo script, evidence, and submission checklist.
+```sh
+python -m http.server 8000
+# open http://localhost:8000/report-viewer.html
+```
 
-All names and data in the sample app should be fictional. Do not use client data, personal information, company confidential information, or social-media data. The guide says participants bring their own datasets and document rights to public data if used. A synthetic dataset avoids that dependency.
+Opening the file directly (`file://`) still works for the file pickers.
+
+## Limitations
+
+ShipSafe is a local SQLite simulation, not a production migration plan. Full details in [`LIMITATIONS.md`](LIMITATIONS.md). Key points:
+
+- The database is synthetic and temporary. No production data is ever read or written.
+- SQLite behaviour differs from Postgres, MySQL, and other production RDBMS.
+- The preservation gate checks only the five seeded rows.
+- All gates run single-threaded; no concurrency or transaction-isolation testing.
+- Elapsed seconds measure local wall-clock overhead, not database performance.
+- `statements_in_script` counts non-empty semicolon-delimited segments of the SQL text before execution — a text property, not a count of statements SQLite actually ran.
+
+## Repository layout
+
+```
+shipsafe/           Python package — rehearse.py, report.py, app_v1.py, app_v2.py, seed.py
+migrations/         candidate.sql  — the safe, repaired migration
+examples/           unsafe.sql     — the original unsafe migration (kept as regression exhibit)
+tests/              test_rehearsal.py — 23 pytest cases
+evidence/           captured red and green runs (JSON + Markdown)
+demo/               red.json, green.json — copies served by the live viewer
+bob_sessions/       IBM Bob IDE task session screenshots
+out/                runtime output directory (gitignored)
+```
+
+## Hackathon
+
+IBM Bob 2.0 Hackathon, September 25–27, 2026.

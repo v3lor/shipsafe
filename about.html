@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About ShipSafe</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+    background: #f0f2f5;
+    color: #1f2328;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: #1f2328;
+    color: #fff;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  header .brand { display: flex; flex-direction: column; gap: 2px; }
+  header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+  header .tagline { font-size: 12px; color: #8b949e; }
+  .btn-back {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.25);
+    background: transparent;
+    color: #fff;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.14s, border-color 0.14s;
+  }
+  .btn-back:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
+
+  /* ── Layout ── */
+  .page { max-width: 760px; margin: 0 auto; padding: 36px 20px 60px; }
+
+  /* ── Sections ── */
+  section { margin-bottom: 40px; }
+  h2 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    margin-bottom: 12px;
+    color: #1f2328;
+  }
+  p { margin-bottom: 12px; color: #24292f; }
+  p:last-child { margin-bottom: 0; }
+
+  /* ── Verdict callout ── */
+  .verdict-pair {
+    display: flex;
+    gap: 12px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+  }
+  .verdict-box {
+    flex: 1;
+    min-width: 200px;
+    border-radius: 8px;
+    padding: 16px 18px;
+    border: 1px solid transparent;
+  }
+  .verdict-box.block { background: #fff1f2; border-color: #fecdd3; }
+  .verdict-box.go    { background: #f0fdf4; border-color: #bbf7d0; }
+  .verdict-box .vb-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #57606a;
+    margin-bottom: 4px;
+  }
+  .verdict-box .vb-verdict {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .verdict-box.block .vb-verdict { color: #991b1b; }
+  .verdict-box.go    .vb-verdict { color: #065f46; }
+  .verdict-box .vb-desc { font-size: 13px; color: #57606a; line-height: 1.5; }
+
+  /* ── Gates table ── */
+  .gates-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin: 16px 0;
+  }
+  .gates-table th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #57606a;
+    border-bottom: 2px solid #e5e7eb;
+  }
+  .gates-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: top;
+  }
+  .gates-table tr:last-child td { border-bottom: none; }
+  .gate-name {
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  .pill.pass  { background: #d1fae5; color: #065f46; }
+  .pill.fail  { background: #fee2e2; color: #991b1b; }
+  .pill.skip  { background: #fef3c7; color: #92400e; }
+
+  /* ── Bob section ── */
+  .bob-steps {
+    list-style: none;
+    counter-reset: bob;
+    margin: 12px 0;
+  }
+  .bob-steps li {
+    counter-increment: bob;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    font-size: 14px;
+    color: #24292f;
+  }
+  .bob-steps li::before {
+    content: counter(bob);
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #1f2328;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+  }
+
+  /* ── Limitation list ── */
+  .limit-list {
+    list-style: none;
+    margin: 12px 0;
+  }
+  .limit-list li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: #24292f;
+    padding-left: 4px;
+  }
+  .limit-list li::before {
+    content: "—";
+    flex-shrink: 0;
+    color: #8b949e;
+    margin-top: 1px;
+  }
+
+  /* ── Try it CTA ── */
+  .cta-box {
+    background: #1f2328;
+    color: #fff;
+    border-radius: 8px;
+    padding: 24px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .cta-box .cta-text { font-size: 15px; font-weight: 600; }
+  .cta-box .cta-sub { font-size: 12px; color: #8b949e; margin-top: 2px; }
+  .btn-demo {
+    font-size: 14px;
+    font-weight: 700;
+    padding: 10px 22px;
+    border-radius: 6px;
+    background: #3b82d4;
+    color: #fff;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.14s;
+    flex-shrink: 0;
+  }
+  .btn-demo:hover { background: #2563c0; }
+
+  /* ── Evidence links ── */
+  .evidence-links {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .evidence-link {
+    font-size: 13px;
+    padding: 5px 12px;
+    border-radius: 5px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #3b82d4;
+    text-decoration: none;
+    transition: border-color 0.12s, background 0.12s;
+  }
+  .evidence-link:hover { background: #f0f7ff; border-color: #bfdbfe; }
+
+  /* ── Divider ── */
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 36px 0; }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    font-size: 12px;
+    color: #8b949e;
+    padding: 20px;
+    border-top: 1px solid #e5e7eb;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>ShipSafe</h1>
+    <div class="tagline">Release rehearsal with IBM Bob IDE</div>
+  </div>
+  <a href="report-viewer.html" class="btn-back">← Back to demo</a>
+</header>
+
+<div class="page">
+
+  <!-- What is ShipSafe -->
+  <section>
+    <h2>What is ShipSafe?</h2>
+    <p>
+      ShipSafe rehearses a database migration against a copy of realistic synthetic data before
+      the release goes out. Given a candidate SQL migration file, it spins up a fresh temporary
+      SQLite database, seeds five synthetic rows, and runs five checks in sequence on that
+      database. The result is a <strong>GO</strong> or <strong>BLOCK</strong> verdict backed
+      by a JSON evidence file you can inspect.
+    </p>
+    <p>
+      IBM Bob IDE investigated the failing migration in this project, identified the root cause,
+      designed and implemented the safe fix, reran all checks, and produced the release decision.
+    </p>
+  </section>
+
+  <hr>
+
+  <!-- The scenario -->
+  <section>
+    <h2>The scenario: BLOCK → GO</h2>
+    <p>
+      The sample app tracks delivery orders. Version 2 of the app adds a
+      <code style="font-family:monospace;font-size:13px;background:#f0f2f5;padding:1px 5px;border-radius:3px;border:1px solid #e5e7eb">delivery_window</code>
+      column — a time slot for each delivery. The unsafe first migration declared this column
+      <code style="font-family:monospace;font-size:13px;background:#f0f2f5;padding:1px 5px;border-radius:3px;border:1px solid #e5e7eb">NOT NULL</code>
+      with no default value. SQLite refuses to add a required column to a table that already has
+      rows with no value for it — so the migration fails, and the release is blocked.
+    </p>
+    <p>
+      The repaired migration uses
+      <code style="font-family:monospace;font-size:13px;background:#f0f2f5;padding:1px 5px;border-radius:3px;border:1px solid #e5e7eb">DEFAULT NULL</code>,
+      which SQLite accepts. Existing orders get a null delivery window (treated as "not yet
+      assigned"). The old app ignores the new column. Rollback to the old app after the new app
+      has written a row still works, because the old app's queries never mention
+      <code style="font-family:monospace;font-size:13px;background:#f0f2f5;padding:1px 5px;border-radius:3px;border:1px solid #e5e7eb">delivery_window</code>.
+    </p>
+
+    <div class="verdict-pair">
+      <div class="verdict-box block">
+        <div class="vb-label">Before repair</div>
+        <div class="vb-verdict">BLOCK</div>
+        <div class="vb-desc">
+          Migration gate FAIL — <em>OperationalError: Cannot add a NOT NULL column with
+          default value NULL</em>. Four gates skipped.
+        </div>
+      </div>
+      <div class="verdict-box go">
+        <div class="vb-label">After repair</div>
+        <div class="vb-verdict">GO</div>
+        <div class="vb-desc">
+          All five gates PASS. Existing rows preserved. Old and new app versions
+          both work. Rollback works.
+        </div>
+      </div>
+    </div>
+
+    <p>
+      Both results are from real CLI runs — no hardcoded verdicts. See the committed evidence:
+    </p>
+    <div class="evidence-links">
+      <a href="evidence/red-run.json" class="evidence-link">evidence/red-run.json (BLOCK)</a>
+      <a href="evidence/red-run.md"   class="evidence-link">evidence/red-run.md</a>
+      <a href="evidence/green-run.json" class="evidence-link">evidence/green-run.json (GO)</a>
+      <a href="evidence/green-run.md"   class="evidence-link">evidence/green-run.md</a>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- Five gates -->
+  <section>
+    <h2>The five gates</h2>
+    <p>
+      Every run checks all five gates in order on the same temporary database. A FAIL in any
+      gate marks all later gates SKIP and sets the verdict to BLOCK. GO requires all five
+      to PASS.
+    </p>
+    <table class="gates-table">
+      <thead>
+        <tr>
+          <th>Gate</th>
+          <th>What it checks</th>
+          <th>Unsafe</th>
+          <th>Safe</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="gate-name">migration</span></td>
+          <td>The candidate SQL runs without error</td>
+          <td><span class="pill fail">FAIL</span></td>
+          <td><span class="pill pass">PASS</span></td>
+        </tr>
+        <tr>
+          <td><span class="gate-name">preservation</span></td>
+          <td>All five seeded rows survive the migration unchanged</td>
+          <td><span class="pill skip">SKIP</span></td>
+          <td><span class="pill pass">PASS</span></td>
+        </tr>
+        <tr>
+          <td><span class="gate-name">old-version</span></td>
+          <td>App v1 reads a seed row and creates a new order on the migrated database</td>
+          <td><span class="pill skip">SKIP</span></td>
+          <td><span class="pill pass">PASS</span></td>
+        </tr>
+        <tr>
+          <td><span class="gate-name">new-version</span></td>
+          <td>App v2 reads a legacy row (null window) and creates an order with a window value</td>
+          <td><span class="pill skip">SKIP</span></td>
+          <td><span class="pill pass">PASS</span></td>
+        </tr>
+        <tr>
+          <td><span class="gate-name">rollback</span></td>
+          <td>App v1 reads a v2-written row and creates another order; column names recorded</td>
+          <td><span class="pill skip">SKIP</span></td>
+          <td><span class="pill pass">PASS</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <hr>
+
+  <!-- Bob's role -->
+  <section>
+    <h2>What IBM Bob IDE did</h2>
+    <p>
+      The repository was handed to Bob IDE with the failing rehearsal already committed. Bob:
+    </p>
+    <ol class="bob-steps">
+      <li>Read the real <code style="font-family:monospace;font-size:13px;background:#f0f2f5;padding:1px 5px;border-radius:3px;border:1px solid #e5e7eb">evidence/red-run.json</code> output and identified the
+          <em>OperationalError: Cannot add a NOT NULL column with default value NULL</em>.</li>
+      <li>Traced the failure to the <code style="font-family:monospace;font-size:13px;background:#f0f2f5;padding:1px 5px;border-radius:3px;border:1px solid #e5e7eb">ADD COLUMN delivery_window TEXT NOT NULL</code>
+          declaration in <code style="font-family:monospace;font-size:13px;background:#f0f2f5;padding:1px 5px;border-radius:3px;border:1px solid #e5e7eb">examples/unsafe.sql</code>.</li>
+      <li>Designed the safe fix: <code style="font-family:monospace;font-size:13px;background:#f0f2f5;padding:1px 5px;border-radius:3px;border:1px solid #e5e7eb">ADD COLUMN delivery_window TEXT DEFAULT NULL</code>,
+          which SQLite accepts for tables with existing rows.</li>
+      <li>Edited <code style="font-family:monospace;font-size:13px;background:#f0f2f5;padding:1px 5px;border-radius:3px;border:1px solid #e5e7eb">migrations/candidate.sql</code>, reran the rehearsal,
+          confirmed all five gates PASS, and verified the pytest suite still passes (23 tests).</li>
+      <li>Audited the gate evidence objects for fabricated claims; found and fixed three issues
+          documented in <a href="https://github.com/v3lor/shipsafe/blob/main/LIMITATIONS.md">LIMITATIONS.md</a>.</li>
+      <li>Produced the committed green evidence and saved task session screenshots to
+          <a href="https://github.com/v3lor/shipsafe/tree/main/bob_sessions">bob_sessions/</a>.</li>
+    </ol>
+  </section>
+
+  <hr>
+
+  <!-- Limitations -->
+  <section>
+    <h2>Limitations</h2>
+    <p>
+      ShipSafe is a local SQLite simulation, not a production migration plan.
+    </p>
+    <ul class="limit-list">
+      <li>The database is synthetic and temporary. No production data is ever read or written.</li>
+      <li>SQLite behaviour differs from Postgres, MySQL, and other production RDBMS. A migration
+          that passes here may still fail against a real database.</li>
+      <li>The preservation gate checks only the five seeded rows, not arbitrary table contents.</li>
+      <li>All gates run single-threaded. No concurrency or transaction-isolation testing is done.</li>
+      <li>Elapsed seconds measure local wall-clock overhead, not database performance.</li>
+      <li><code style="font-family:monospace;font-size:13px;background:#f0f2f5;padding:1px 5px;border-radius:3px;border:1px solid #e5e7eb">statements_in_script</code> counts semicolon-delimited segments of the SQL text
+          before execution — a text property, not a count of statements SQLite actually ran.</li>
+    </ul>
+  </section>
+
+  <hr>
+
+  <!-- Try it -->
+  <section>
+    <div class="cta-box">
+      <div>
+        <div class="cta-text">See the BLOCK → GO comparison live</div>
+        <div class="cta-sub">Click "Load example" in the viewer — no file upload needed</div>
+      </div>
+      <a href="report-viewer.html" class="btn-demo">Open report viewer</a>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  ShipSafe &nbsp;·&nbsp; IBM Bob 2.0 Hackathon, September 2026 &nbsp;·&nbsp;
+  <a href="https://github.com/v3lor/shipsafe" style="color:#57606a">github.com/v3lor/shipsafe</a>
+  &nbsp;·&nbsp; Made with IBM Bob
+</footer>
+
+</body>
+</html>
